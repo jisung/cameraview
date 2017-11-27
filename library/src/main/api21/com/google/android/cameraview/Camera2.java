@@ -30,6 +30,8 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.util.SparseIntArray;
@@ -169,6 +171,27 @@ class Camera2 extends CameraViewImpl {
 
     };
 
+    private final ImageReader.OnImageAvailableListener mOnPreviewAvailableListener
+            = new ImageReader.OnImageAvailableListener() {
+
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            try (Image image = reader.acquireNextImage()) {
+                Image.Plane[] planes = image.getPlanes();
+                if (planes.length > 0) {
+                    ByteBuffer buffer = planes[0].getBuffer();
+                    byte[] data = new byte[buffer.remaining()];
+                    buffer.get(data);
+                    mCallback.onPreviewFrame(data);
+                }
+                if (image != null) {
+                    image.close();
+                }
+            }
+        }
+
+    };
+
 
     private String mCameraId;
 
@@ -181,6 +204,7 @@ class Camera2 extends CameraViewImpl {
     CaptureRequest.Builder mPreviewRequestBuilder;
 
     private ImageReader mImageReader;
+    private ImageReader mPreviewReader;
 
     private final SizeMap mPreviewSizes = new SizeMap();
 
@@ -195,6 +219,9 @@ class Camera2 extends CameraViewImpl {
     private int mFlash;
 
     private int mDisplayOrientation;
+
+    private HandlerThread mBackgroundThread;
+    private Handler mBackgroundHandler;
 
     Camera2(Callback callback, PreviewImpl preview, Context context) {
         super(callback, preview);
@@ -231,6 +258,10 @@ class Camera2 extends CameraViewImpl {
         if (mImageReader != null) {
             mImageReader.close();
             mImageReader = null;
+        }
+        if (mPreviewReader != null) {
+            mPreviewReader.close();
+            mPreviewReader = null;
         }
     }
 
@@ -447,10 +478,17 @@ class Camera2 extends CameraViewImpl {
         if (mImageReader != null) {
             mImageReader.close();
         }
+        if (mPreviewReader != null) {
+            mPreviewReader.close();
+        }
         Size largest = mPictureSizes.sizes(mAspectRatio).last();
         mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
                 ImageFormat.JPEG, /* maxImages */ 2);
         mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, null);
+
+        mPreviewReader = ImageReader.newInstance(largest.getWidth() / 16,
+                largest.getHeight() / 16, ImageFormat.YUV_420_888, /* maxImages */ 2);
+        mPreviewReader.setOnImageAvailableListener(mOnPreviewAvailableListener, mBackgroundHandler);
     }
 
     /**
@@ -480,8 +518,9 @@ class Camera2 extends CameraViewImpl {
         try {
             mPreviewRequestBuilder = mCamera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
-            mCamera.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
-                    mSessionCallback, null);
+            mPreviewRequestBuilder.addTarget(mPreviewReader.getSurface());
+            mCamera.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface(),
+                    mPreviewReader.getSurface()), mSessionCallback, null);
         } catch (CameraAccessException e) {
             throw new RuntimeException("Failed to start camera session");
         }

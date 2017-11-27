@@ -92,6 +92,12 @@ class Camera1 extends CameraViewImpl {
             setUpPreview();
         }
         mShowingPreview = true;
+        mCamera.setOneShotPreviewCallback(new Camera.PreviewCallback() {
+            @Override
+            public void onPreviewFrame(byte[] bytes, Camera camera) {
+                mCallback.onPreviewFrame(bytes);
+            }
+        });
         mCamera.startPreview();
         return true;
     }

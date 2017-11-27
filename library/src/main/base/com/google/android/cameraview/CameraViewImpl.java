@@ -78,7 +78,7 @@ abstract class CameraViewImpl {
 
         void onPictureTaken(byte[] data);
 
-        void onPreviewFrame(byte[] data);
+        void onPreviewFrame(byte[] data, int width, int height);
     }
 
 }

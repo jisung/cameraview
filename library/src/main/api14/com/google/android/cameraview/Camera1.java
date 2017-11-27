@@ -95,7 +95,8 @@ class Camera1 extends CameraViewImpl {
         mCamera.setOneShotPreviewCallback(new Camera.PreviewCallback() {
             @Override
             public void onPreviewFrame(byte[] bytes, Camera camera) {
-                mCallback.onPreviewFrame(bytes);
+                Camera.Size size = camera.getParameters().getPreviewSize();
+                mCallback.onPreviewFrame(bytes, size.width, size.height);
             }
         });
         mCamera.startPreview();

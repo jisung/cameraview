@@ -278,8 +278,8 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         @Override
-        public void onPreviewFrame(CameraView cameraView, byte[] data) {
-            Log.d(TAG, "onPreviewFrame " + data.length);
+        public void onPreviewFrame(CameraView cameraView, byte[] data, int width, int height) {
+            Log.d(TAG, "onPreviewFrame - " +  width + "x" + height);
         }
     };
 

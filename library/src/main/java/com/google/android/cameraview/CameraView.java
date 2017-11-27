@@ -451,9 +451,9 @@ public class CameraView extends FrameLayout {
         }
 
         @Override
-        public void onPreviewFrame(byte[] data) {
+        public void onPreviewFrame(byte[] data, int width, int height) {
             for (Callback callback : mCallbacks) {
-                callback.onPreviewFrame(CameraView.this, data);
+                callback.onPreviewFrame(CameraView.this, data, width, height);
             }
         }
 
@@ -549,7 +549,7 @@ public class CameraView extends FrameLayout {
          * @param cameraView
          * @param data
          */
-        public void onPreviewFrame(CameraView cameraView, byte[] data) {
+        public void onPreviewFrame(CameraView cameraView, byte[] data, int width, int height) {
 
         }
     }
